@@ -5,9 +5,11 @@ import { prisma } from "@/lib/prisma";
 export async function getPassbookTransactions(classId: string) {
   const transactions = await prisma.transaction.findMany({
     where: { classId },
-    orderBy: { date: "asc" }
+    orderBy: [
+      { date: "asc" },
+      { createdAt: "asc" }
+    ]
   });
-  
   let balance = 0;
   return transactions.map(t => {
     if (t.type === "INCOME") {

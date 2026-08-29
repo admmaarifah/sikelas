@@ -33,7 +33,10 @@ export async function getStudentPassbook(classId: string, nisn: string) {
 export async function getClassSummary(classId: string) {
   const transactions = await prisma.transaction.findMany({
     where: { classId },
-    orderBy: { date: "asc" }
+    orderBy: [
+      { date: "asc" },
+      { createdAt: "asc" }
+    ]
   });
 
   // Group incomes by day (normalized to YYYY-MM-DD), keep expenses as is

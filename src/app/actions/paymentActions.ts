@@ -198,13 +198,16 @@ export async function bulkPayDaily(
 
   const student = await prisma.student.findUnique({ where: { id: studentId } });
   
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   // 1. Create a single transaction for the passbook
   const tx = await prisma.transaction.create({
     data: {
       classId,
       type: "INCOME",
       amount: amountReceived,
-      date: new Date(), // recorded today
+      date: today, // recorded today, normalized to midnight
       description: `Setoran borongan (${daysToPay} hari) - ${student?.name}`,
       recordedById: userId
     }
