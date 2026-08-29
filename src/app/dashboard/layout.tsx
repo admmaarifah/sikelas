@@ -1,8 +1,8 @@
 "use client";
 
 import Sidebar from "@/components/Sidebar";
-import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useRef, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
 
 export default function DashboardLayout({
   children,
@@ -10,11 +10,24 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
 
   const userName = session?.user?.name || "User";
   const userInitials = userName.charAt(0).toUpperCase();
   const role = session?.user?.role || "";
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50/50">
@@ -49,19 +62,43 @@ export default function DashboardLayout({
             <div className="hidden md:block h-8 w-px bg-gray-200"></div>
 
             {/* User Profile */}
-            <div className="flex items-center space-x-3 cursor-pointer group">
-              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold group-hover:ring-4 ring-blue-50 transition-all">
-                {userInitials}
+            <div className="relative" ref={dropdownRef}>
+              <div 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center space-x-3 cursor-pointer group select-none"
+              >
+                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold group-hover:ring-4 ring-blue-50 transition-all">
+                  {userInitials}
+                </div>
+                <div className="hidden md:block">
+                  <p className="text-sm font-bold text-slate-800">{userName}</p>
+                  <p className="text-xs text-slate-500">{role}</p>
+                </div>
+                <div className={`hidden md:block text-slate-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
               </div>
-              <div className="hidden md:block">
-                <p className="text-sm font-bold text-slate-800">{userName}</p>
-                <p className="text-xs text-slate-500">{role}</p>
-              </div>
-              <div className="hidden md:block text-slate-400 group-hover:text-slate-600">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
+
+              {/* Dropdown Menu */}
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-3 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="px-4 py-2 border-b border-gray-50 md:hidden">
+                    <p className="text-sm font-bold text-slate-800">{userName}</p>
+                    <p className="text-xs text-slate-500">{role}</p>
+                  </div>
+                  <button
+                    onClick={() => signOut({ callbackUrl: "/" })}
+                    className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 flex items-center space-x-2 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
