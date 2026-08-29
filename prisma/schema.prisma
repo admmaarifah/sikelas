@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  TREASURER
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(TREASURER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  classesAsTeacher   Class[] @relation("TeacherClasses")
+  classesAsTreasurer Class[] @relation("TreasurerClasses")
+  
+  recordedTransactions Transaction[]
+  recordedDailyPayments DailyPayment[]
+}
+
+model Class {
+  id          String   @id @default(cuid())
+  name        String
+  teacherId   String?
+  treasurerId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teacher   User? @relation("TeacherClasses", fields: [teacherId], references: [id])
+  treasurer User? @relation("TreasurerClasses", fields: [treasurerId], references: [id])
+  
+  students  Student[]
+  settings  ClassFundSettings?
+  transactions Transaction[]
+}
+
+model Student {
+  id        String   @id @default(cuid())
+  nis       String   @unique
+  name      String
+  classId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  class     Class @relation(fields: [classId], references: [id])
+  
+  dailyPayments DailyPayment[]
+}
+
+model ClassFundSettings {
+  id           String   @id @default(cuid())
+  classId      String   @unique
+  dailyNominal Float    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  class Class @relation(fields: [classId], references: [id])
+}
+
+model Transaction {
+  id          String          @id @default(cuid())
+  classId     String
+  type        TransactionType
+  amount      Float
+  date        DateTime        @default(now())
+  description String
+  proofLink   String?
+  recordedById String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  class      Class @relation(fields: [classId], references: [id])
+  recordedBy User  @relation(fields: [recordedById], references: [id])
+  dailyPayments DailyPayment[]
+}
+
+model DailyPayment {
+  id          String   @id @default(cuid())
+  studentId   String
+  date        DateTime
+  amount      Float
+  recordedById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  student    Student @relation(fields: [studentId], references: [id])
+  recordedBy User    @relation(fields: [recordedById], references: [id])
+  
+  transactionId String?
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+}
