@@ -213,21 +213,8 @@ export async function bulkPayDaily(
     }
   });
 
-  // 2. Cari tanggal paling awal ada pembayaran di kelas ini (untuk patokan awal mula kelas berjalan)
-  const earliestPayment = await prisma.dailyPayment.findFirst({
-    where: { student: { classId } },
-    orderBy: { date: 'asc' }
-  });
-
-  // Mulai dari pembayaran terawal kelas, ATAU dari startDate jika belum ada sama sekali
-  let currentDate = earliestPayment ? new Date(earliestPayment.date) : new Date(startDate);
+  let currentDate = new Date(startDate);
   currentDate.setHours(0, 0, 0, 0);
-
-  // Jika user secara manual memilih startDate yang lebih lampau dari earliestPayment, gunakan itu
-  if (startDate.getTime() < currentDate.getTime()) {
-    currentDate = new Date(startDate);
-    currentDate.setHours(0, 0, 0, 0);
-  }
 
   let daysFound = 0;
   const paymentsToInsert = [];
