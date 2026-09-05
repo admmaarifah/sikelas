@@ -112,7 +112,7 @@ export default function PassbookPage() {
                 {transactions.map((t, i) => (
                   <tr key={t.id}>
                     <td className="py-1">{format(new Date(t.date), "dd/MM/yy")}</td>
-                    <td className="py-1 truncate max-w-[250px]">{t.description}</td>
+                    <td className="py-1 break-words">{t.description}</td>
                     <td className="py-1 text-right">{t.type === "EXPENSE" ? t.amount.toLocaleString() : ""}</td>
                     <td className="py-1 text-right">{t.type === "INCOME" ? t.amount.toLocaleString() : ""}</td>
                     <td className="py-1 text-right font-bold">{t.balance.toLocaleString()}</td>
