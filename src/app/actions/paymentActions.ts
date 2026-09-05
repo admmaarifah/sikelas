@@ -213,11 +213,26 @@ export async function bulkPayDaily(
     }
   });
 
-  let currentDate = new Date(startDate);
+  // 2. Cari tanggal paling awal ada pembayaran di kelas ini (untuk patokan awal mula kelas berjalan)
+  const earliestPayment = await prisma.dailyPayment.findFirst({
+    where: { student: { classId } },
+    orderBy: { date: 'asc' }
+  });
+
+  // Mulai dari pembayaran terawal kelas, ATAU dari startDate jika belum ada sama sekali
+  let currentDate = earliestPayment ? new Date(earliestPayment.date) : new Date(startDate);
   currentDate.setHours(0, 0, 0, 0);
+
+  // Jika user secara manual memilih startDate yang lebih lampau dari earliestPayment, gunakan itu
+  if (startDate.getTime() < currentDate.getTime()) {
+    currentDate = new Date(startDate);
+    currentDate.setHours(0, 0, 0, 0);
+  }
 
   let daysFound = 0;
   const paymentsToInsert = [];
+  let firstAppliedDate = null;
+  let lastAppliedDate = null;
   
   while (daysFound < daysToPay) {
     const dayOfWeek = currentDate.getDay();
@@ -228,6 +243,9 @@ export async function bulkPayDaily(
       });
       
       if (!existing) {
+        if (!firstAppliedDate) firstAppliedDate = new Date(currentDate);
+        lastAppliedDate = new Date(currentDate);
+
         paymentsToInsert.push({
           studentId,
           date: new Date(currentDate),
@@ -246,6 +264,17 @@ export async function bulkPayDaily(
   for (const p of paymentsToInsert) {
     await prisma.dailyPayment.create({
       data: p
+    });
+  }
+
+  // 4. Update the transaction description to show exactly which dates were paid off
+  if (firstAppliedDate && lastAppliedDate) {
+    const formatStr = "dd/MM/yy";
+    await prisma.transaction.update({
+      where: { id: tx.id },
+      data: {
+        description: `Setoran borongan (${daysToPay} hari) - ${student?.name} (Lunas: ${format(firstAppliedDate, formatStr)} s.d ${format(lastAppliedDate, formatStr)})`
+      }
     });
   }
 
